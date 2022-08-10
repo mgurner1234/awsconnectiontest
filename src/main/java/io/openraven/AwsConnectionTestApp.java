@@ -30,25 +30,28 @@ public class AwsConnectionTestApp implements CommandLineRunner {
     @Value("${arrayOfRegions}")
     private String[] arrayOfRegions;
 
+    @Value("${arrayOfExternalIdentifiers}")
+    private String[] arrayOfExternalIdentifiers;
+
     @Override
     public void run(String... args) {
 
         Arrays.stream(args).forEach(role -> {
-            Arrays.stream(arrayOfRegions).forEach(region -> {
-                LOG.debug("Attempting connect for {} -> {}", role, region);
+            for (int i = 0; i< arrayOfRegions.length; i++) {
+                LOG.debug("Attempting connect for {} -> {}", role, arrayOfRegions[i]);
 
                 try {
-                    final var clientCreator = ClientCreators.assumeRoleCreator(Region.of(region), role, Optional.empty());
-                    LOG.debug("Assume Role Creator created for {} -> {}", role, region);
+                    final var clientCreator = ClientCreators.assumeRoleCreator(Region.of(arrayOfRegions[i]), role, Optional.of(arrayOfExternalIdentifiers[i]));
+                    LOG.debug("Assume Role Creator created for {} -> {}", role, arrayOfRegions[i]);
 
                     try (final var client = clientCreator.apply(StsClient.builder()).build()) {
-                        LOG.debug("clientCreator apply complete for StsClient {} -> {} ", role, region);
+                        LOG.debug("clientCreator apply complete for StsClient {} -> {} ", role, arrayOfRegions[i]);
 
                         final String account = client.getCallerIdentity().account();
-                        LOG.debug("caller Identity {} -> {} -> {} ", role, region, account);
+                        LOG.debug("caller Identity {} -> {} -> {} ", role, arrayOfRegions[i], account);
 
                         try (final var ec2Client = clientCreator.apply(Ec2Client.builder()).build()) {
-                            LOG.debug("clientCreator apply complete for Ec2Client {} -> {} ", role, region);
+                            LOG.debug("clientCreator apply complete for Ec2Client {} -> {} ", role, arrayOfRegions[i]);
                         } catch (Exception exception) {
                             LOG.debug("Error on clientCreator.apply:", exception);
                         }
@@ -60,7 +63,7 @@ public class AwsConnectionTestApp implements CommandLineRunner {
                     LOG.debug("Error:", e);
 
                 }
-            });
+            }
         });
     }
 }
